@@ -1,0 +1,41 @@
+apiVersion: retrain.ai/courseraScraper
+kind: CronWorkflow
+metadata:
+  name: courses-cron-wf
+spec:
+  schedule: "* * 7 * *"
+  workflowSpec:
+    entrypoint: getcourses
+    templates:
+    - name: list-courses
+      inputs:
+        parameters:
+        - name: keyword
+      container:
+        image: list_courses
+        args: ["{{inputs.parameters.keyword}}"]
+    - name: get-courses-in-HTML
+      inputs:
+        parameters:
+        - name: keyword
+      container:
+        image: get_courses
+        args: ["{{inputs.parameters.keyword}}"]
+    - name: convert-HTML-to-raw-data
+      inputs:
+        parameters:
+        - name: html-file-path
+      container:
+        image: convert-to-raw-data
+        args: ["{{inputs.parameters.html-file-path}}"]
+      dependencies:
+      - get-courses-in-HTML
+    -name: integration-tests
+      inputs:
+        parameters:
+        - name: raw-data-path
+      container:
+        image: test_courses
+        args: ["{{inputs.parameters.keyword}}", "--raw-data", "inputs.parameters.raw-data"]
+      dependencies:
+      - convert-HTML-to-raw-data

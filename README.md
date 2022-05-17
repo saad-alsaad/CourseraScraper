@@ -8,3 +8,8 @@
 <p>Install needed libraries: <span>`pip install -r requirements.txt`</span></p>
 <p>To run the main.py: `python main.py --keyword "web Scraping"`</p>
 <p>To run unit tests: `python tester.py`.</p>
+
+
+### Argo WorkFlows:
+<p>`argo_workflow.yaml` file has configuration of 4 tasks workflow with consideration of dependencies. each task is responsible of one action</p>
+<p>The workflow scheduled to be run in weekly basis</p>
