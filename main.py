@@ -51,7 +51,7 @@ class CourseraCourses:
         except requests.exceptions.RequestException as e:
             print(f'Error happened when creating a request for {url}\nError Msg: {e}')
 
-    def _get_text_content(self, url: str) -> str:
+    def _get_content(self, url: str) -> list:
         """
         This method return a JSON text for the Coursera page data
         :param url: url for a specific page
@@ -60,9 +60,12 @@ class CourseraCourses:
 
         response = self.get_response(url, self._session)
         soup = bs(response.text.encode('utf-8'), 'html.parser')
+        rate = soup.find(class_="_16ni8zai m-b-0 rating-text number-rating number-rating-expertise")
         soup = soup.find_all("script")
+        if rate:
+            rate = rate.next
 
-        return soup[11].get_text()
+        return [soup[11].get_text(), rate]
 
     def _get_courses_urls(self, url: str, page: int) -> list:
         """
@@ -72,14 +75,15 @@ class CourseraCourses:
         :return: list of courses url
         """
 
-        text = self._get_text_content(f'{url}&page={page}&index=prod_all_products_term_optimization&entityTypeDescription=Courses')
+        content = self._get_content(f'{url}&page={page}&index=prod_all_products_term_optimization&entityTypeDescription=Courses')
 
+        text = content[0]
         data = text.split("window.App=")[1]
         json_data = json.loads(data.split("window.appName=")[0][:-6])
         results_state = json_data['context']['dispatcher']['stores']['AlgoliaResultsStateStore']['resultsState']
         courses = results_state[2]['content']['_rawResults'][0]['hits']
 
-        courses_url = [self._base_url + course['objectUrl'] for course in courses]
+        courses_url = [self._base_url + course['objectUrl'][1:] for course in courses]
 
         return courses_url
 
@@ -92,23 +96,24 @@ class CourseraCourses:
 
         result = defaultdict()
 
-        text = self._get_text_content(url)
+        content = self._get_content(url)
+
+        text = content[0]
+        rate = content[1]
 
         json_data = json.loads(text)['@graph']
-
         course_content = json_data[1]
 
         result['Name'] = course_content['name']
         result['Url'] = url
+        result['Rating'] = rate
 
-        result['Rating'] = None
-        if 'aggregateRating' in course_content:
+        if not rate and 'aggregateRating' in course_content:
             rate_value = course_content['aggregateRating'].get('ratingValue')
             if rate_value:
-                result['Rating'] = float(rate_value)
+                result['Rating'] = rate_value
 
         result['Tag'] = [tag['item']['name'] for tag in json_data[0]['itemListElement'][1:]]
-
         result['Description'] = course_content['description']
 
         return result
