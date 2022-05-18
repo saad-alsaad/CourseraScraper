@@ -3,7 +3,7 @@ kind: CronWorkflow
 metadata:
   name: courses-cron-wf
 spec:
-  schedule: "* * 7 * *"
+  schedule: "* * 7 * *"       # The workflow will be running every 7 days (weekly basis)
   workflowSpec:
     entrypoint: getcourses
     templates:
@@ -11,25 +11,69 @@ spec:
       inputs:
         parameters:
         - name: keyword
+      output:
+        parameters:
+          - name: courses-list
       container:
         image: list_courses
         args: ["{{inputs.parameters.keyword}}"]
+
     - name: get-courses-in-HTML
       inputs:
         parameters:
-        - name: keyword
+        - name: courses-list
       container:
         image: get_courses
-        args: ["{{inputs.parameters.keyword}}"]
+        args: ["{{inputs.parameters.courses-list}}"]
+      dependencies:
+        - list-courses
+
     - name: convert-HTML-to-raw-data
       inputs:
         parameters:
-        - name: html-file-path
+          - name: html-file-path
+      output:
+        parameters:
+          - name: courses
       container:
         image: convert-to-raw-data
-        args: ["{{inputs.parameters.html-file-path}}"]
+        args: [ "{{inputs.parameters.html-file-path}}"]
       dependencies:
-      - get-courses-in-HTML
+        - get-courses-in-HTML
+
+    - name: extract-new-courses         #can be running in parallel with extract-updated-courses
+      inputs:
+        parameters:
+          - name: courses
+      container:
+        image: extract-new-courses
+        args: [ "{{inputs.parameters.courses}}" ]
+      dependencies:
+        - convert-HTML-to-raw-data
+
+    - name: extract-updated-courses   #can be running in parallel with extract-new-courses
+      inputs:
+        parameters:
+          - name: courses
+      output:
+        parameters:
+          - name: updatedCourses
+      container:
+        image: extract-updated-courses
+        args: [ "{{inputs.parameters.courses}}" ]
+      dependencies:
+        - convert-HTML-to-raw-data
+
+    - name: update-existing-courses
+      inputs:
+        parameters:
+          - name: updatedCourses
+      container:
+        image: update-existing-courses
+        args: [ "{{inputs.parameters.updatedCourses}}" ]
+      dependencies:
+        - extract-updated-courses
+
     -name: integration-tests
       inputs:
         parameters:
@@ -38,4 +82,4 @@ spec:
         image: test_courses
         args: ["{{inputs.parameters.keyword}}", "--raw-data", "inputs.parameters.raw-data"]
       dependencies:
-      - convert-HTML-to-raw-data
+        - convert-HTML-to-raw-data
