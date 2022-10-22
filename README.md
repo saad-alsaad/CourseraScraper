@@ -1,5 +1,7 @@
 ### Coursera Scraper Script
 
+<h4>A Python Script implemented to scrap courses from Coursera. The script will return courses based on keywords passed to the script and generate results.csv that contains the course name, URL, rating, tag, and description.</h4>
+
 <p>main.py script built to scrap courses from <a href="https://www.coursera.org">Coursera</a>. the script will return courses from the first page only</p>
 <p>main.py script takes --keyword <value> argument to search for courses with specific keyword</p>
 <p>tester.py script has some unit tests</p>
